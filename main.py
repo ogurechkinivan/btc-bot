@@ -1,31 +1,20 @@
+import os
 import requests
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from telegram import ReplyKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes
+)
 import matplotlib.pyplot as plt
 from io import BytesIO
 import datetime
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CallbackQueryHandler
 
-
-
-
-# Получение курса BTC с CoinDesk
 print("=== 🚀 Стартую актуальный main.py ===")
 
-#def get_btc_price():
-#    url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-#    print(f"👀 Делаю запрос к: {url}")
 
-#    try:
-#        response = requests.get(url)
-#        data = response.json()
-#        price = data["bitcoin"]["usd"]
-#        return f"💸 Курс биткоина: ${price}"
-#    except Exception as e:
-#        return f"Ошибка при получении курса: {str(e)}"
-
+# Получение курса BTC
 def get_btc_price():
     url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,eur,uah,rub"
     print(f"👀 Делаю запрос к: {url}")
@@ -44,6 +33,8 @@ def get_btc_price():
     except Exception as e:
         return f"Ошибка при получении курса BTC: {str(e)}"
 
+
+# Получение курса ETH
 def get_eth_price():
     url = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,eur,uah,rub"
     print(f"👀 Делаю запрос к: {url}")
@@ -62,6 +53,8 @@ def get_eth_price():
     except Exception as e:
         return f"Ошибка при получении курса ETH: {str(e)}"
 
+
+# Построение графика BTC
 async def btc_chart(chat_id, bot):
     url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1"
     print(f"📊 Запрашиваю график для chat_id: {chat_id}")
@@ -92,7 +85,7 @@ async def btc_chart(chat_id, bot):
         await bot.send_message(chat_id=chat_id, text=f"Ошибка при получении графика: {str(e)}")
 
 
-
+# Команда /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("Получена команда /start от", update.effective_user.username)
 
@@ -109,6 +102,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+
+# Обработка кнопок
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -129,43 +124,32 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await btc_chart(chat_id, context.bot)
 
 
-
-# Команда /start с кнопками
-#async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#    print("Получена команда /start от", update.effective_user.username)
-
-#    keyboard = [["/btc", "/eth", "/chart"]]
-#    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
-#    await update.message.reply_text(
-#        "Привет! Выбери валюту, чтобы узнать курс 👇",
-#        reply_markup=markup
-#    )
-
 # Команда /btc
 async def btc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("Получена команда /btc от", update.effective_user.username)
     price = get_btc_price()
     await update.message.reply_text(price)
 
+
+# Команда /eth
 async def eth(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("Получена команда /eth от", update.effective_user.username)
     price = get_eth_price()
     await update.message.reply_text(price)
 
 
-
 # Точка входа
 if __name__ == '__main__':
-    app = ApplicationBuilder().token("7264724437:AAEtjwkOax_uburdBeftJcWrVoIhxG_Y4hk").build()
+    token = os.getenv("BOT_TOKEN")
+    if not token:
+        raise RuntimeError("❌ Не найдена переменная окружения BOT_TOKEN")
+
+    app = ApplicationBuilder().token(token).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("btc", btc))
     app.add_handler(CommandHandler("eth", eth))
-    app.add_handler(CommandHandler("chart", btc_chart))
     app.add_handler(CallbackQueryHandler(handle_buttons))
-
-
 
     print("✅ Бот запущен. Нажимай Ctrl+C для остановки.")
     app.run_polling()
